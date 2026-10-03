@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Klang Valley Integrated Transit & My50 Auditor 🇲🇾</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .fare-type-btn.active {
+        background-color: #4f46e5; /* indigo-600 */
+        color: white;
+        box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen pb-16 antialiased">
+
+  <!-- Header Bar -->
+  <header class="bg-emerald-900 text-white sticky top-0 z-50 shadow-md">
+    <div class="max-w-6xl mx-auto px-4 py-3.5 flex items-center justify-between">
+      <div class="flex items-center space-x-2.5">
+        <div class="bg-emerald-600 p-2 rounded-xl">
+          <i data-lucide="train" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold leading-tight">MyRapid Calculator 🇲🇾</h1>
+          <p class="text-[11px] text-emerald-200">Not Sponspored by MyRapid, Just for fun</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- LEFT COLUMN: Live Route & Arrival (5 Cols) -->
+    <section class="lg:col-span-5 space-y-5">
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+        <div class="flex items-center gap-2 mb-4">
+          <i data-lucide="route" class="w-5 h-5 text-emerald-600"></i>
+          <h2 class="text-sm font-bold text-slate-900">Journey Planner (All Lines)</h2>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Origin -->
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/60">
+            <span class="block text-[10px] font-bold text-emerald-700 uppercase mb-1">Departure Point</span>
+            <div class="grid grid-cols-2 gap-2">
+              <select id="originLineSelect" class="bg-white border border-slate-200 text-xs rounded-lg p-2 focus:ring-1 focus:ring-emerald-500 outline-none font-semibold text-slate-700"></select>
+              <select id="originStationSelect" class="bg-white border border-slate-200 text-xs rounded-lg p-2 focus:ring-1 focus:ring-emerald-500 outline-none font-semibold text-slate-800"></select>
+            </div>
+          </div>
+
+          <!-- Swap -->
+          <div class="flex justify-center -my-2.5 relative z-10">
+            <button id="swapBtn" class="bg-white hover:bg-slate-100 text-slate-600 p-2 rounded-full border border-slate-200 shadow-sm transition active:scale-95">
+              <i data-lucide="arrow-up-down" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <!-- Destination -->
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/60">
+            <span class="block text-[10px] font-bold text-rose-700 uppercase mb-1">Arrival Point</span>
+            <div class="grid grid-cols-2 gap-2">
+              <select id="destLineSelect" class="bg-white border border-slate-200 text-xs rounded-lg p-2 focus:ring-1 focus:ring-emerald-500 outline-none font-semibold text-slate-700"></select>
+              <select id="destStationSelect" class="bg-white border border-slate-200 text-xs rounded-lg p-2 focus:ring-1 focus:ring-emerald-500 outline-none font-semibold text-slate-800"></select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Terminal Status Card -->
+        <div class="mt-5 bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 rounded-2xl p-4 space-y-4">
+          <div class="grid grid-cols-2 gap-3 divide-x divide-emerald-200">
+            <div>
+              <span class="text-[11px] text-slate-500 block">Next Train Arrival</span>
+              <div class="text-3xl font-black text-emerald-800 tracking-tight" id="countdownTimer">--:--</div>
+              <span id="serviceBadge" class="text-[10px] font-bold bg-emerald-200/80 text-emerald-900 px-2 py-0.5 rounded mt-1 inline-block">Normal: 6m</span>
+            </div>
+            <div class="pl-3">
+              <span class="text-[11px] text-slate-500 block">Est. Arrival Time</span>
+              <div class="text-3xl font-black text-slate-800 tracking-tight" id="arrivalTimeDisplay">--:--</div>
+              <span id="durationDisplay" class="text-[11px] text-slate-500 block mt-1 font-medium">0 min (0 stops)</span>
+            </div>
+          </div>
+
+          <!-- Interchange Info -->
+          <div id="routePathDetails" class="hidden text-xs bg-white/70 border border-emerald-100 rounded-xl p-3 space-y-1.5 text-slate-600"></div>
+
+          <!-- Fare -->
+          <div class="pt-3 border-t border-emerald-200/50 flex items-center justify-between text-xs">
+            <div class="flex items-center gap-1.5">
+              <i data-lucide="credit-card" class="w-4 h-4 text-emerald-700"></i>
+              <span class="text-slate-600 font-medium">Cashless Fare (TNG):</span>
+              <span id="tngFareDisplay" class="font-extrabold text-emerald-800 text-sm">RM 0.00</span>
+            </div>
+            <div class="text-slate-400">
+              Cash: <span id="cashFareDisplay" class="font-bold text-slate-600">RM 0.00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: Multi-Period Itinerary Planner with ALL MRT Stations (7 Cols) -->
+    <section class="lg:col-span-7 space-y-5">
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <div class="bg-indigo-100 p-1.5 rounded-lg">
+              <i data-lucide="calendar-check" class="w-4 h-4 text-indigo-700"></i>
+            </div>
+            <h2 class="text-sm font-bold text-slate-900">Custom Date-Range My50 Pass Planner</h2>
+          </div>
+          <span class="text-xs bg-indigo-50 text-indigo-700 font-extrabold px-2.5 py-1 rounded-md">My50 Pass: RM 50.00</span>
+        </div>
+        <p class="text-xs text-slate-500 mb-4">
+          Select any departure and arrival station across all MRT & LRT lines. Schedule custom date ranges and weekday filters to evaluate My50 pass viability.
+        </p>
+
+        <!-- Itinerary Input Form -->
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3.5">
+          
+          <!-- Station & Fare Type Selectors -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <label class="block text-[11px] font-bold text-slate-600">Route Selection (All MRT & LRT Lines)</label>
+              <button id="copyFromLeftBtn" class="text-[10px] text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1 hover:underline">
+                <i data-lucide="copy" class="w-3 h-3"></i> Sync Left Journey
+              </button>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <span class="block text-[10px] text-slate-400 font-semibold mb-0.5">FROM: Departure Station</span>
+                <select id="planOrigStationSelect" class="w-full bg-white border border-slate-200 text-xs rounded-lg p-2 font-medium focus:ring-1 focus:ring-indigo-500 outline-none"></select>
+              </div>
+              <div>
+                <span class="block text-[10px] text-slate-400 font-semibold mb-0.5">TO: Arrival Station</span>
+                <select id="planDestStationSelect" class="w-full bg-white border border-slate-200 text-xs rounded-lg p-2 font-medium focus:ring-1 focus:ring-indigo-500 outline-none"></select>
+              </div>
+            </div>
+             <!-- Fare Type Selection -->
+            <div>
+              <label class="block text-[10px] text-slate-400 font-semibold mb-1">Fare Type for this Trip</label>
+              <div id="fareTypeSelector" class="flex w-full p-1 bg-slate-200 rounded-lg">
+                <button data-value="tng" class="fare-type-btn active flex-1 text-xs font-semibold py-1.5 rounded-md transition-all">Cashless (TNG)</button>
+                <button data-value="cash" class="fare-type-btn flex-1 text-xs font-semibold py-1.5 rounded-md transition-all">Cash</button>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between px-1 text-[11px] text-slate-500 font-medium">
+              <span id="planSingleFareLabel">Leg Single Fare (TNG): <b id="planSingleFarePreview" class="text-indigo-600 font-bold">RM 0.00</b></span>
+              <span id="planStopsPreview" class="text-slate-400">0 stops</span>
+            </div>
+          </div>
+
+          <!-- Date Filters -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-3 border-t border-slate-200/60">
+            <div>
+              <label class="block text-[10px] font-bold text-slate-500 mb-1">Start Date</label>
+              <input type="date" id="startDateInput" class="w-full bg-white border border-slate-200 text-xs rounded-lg p-2 focus:ring-1 focus:ring-indigo-500 outline-none font-medium">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-500 mb-1">End Date</label>
+              <input type="date" id="endDateInput" class="w-full bg-white border border-slate-200 text-xs rounded-lg p-2 focus:ring-1 focus:ring-indigo-500 outline-none font-medium">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-500 mb-1">Day Filter</label>
+              <select id="dayFilter" class="w-full bg-white border border-slate-200 text-xs rounded-lg p-2 font-medium focus:ring-1 focus:ring-indigo-500 outline-none">
+                <option value="all">Everyday (Mon – Sun)</option>
+                <option value="weekdays" selected>Weekdays Only (Mon – Fri)</option>
+                <option value="weekends">Weekends Only (Sat – Sun)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-1">
+            <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-600 font-semibold select-none">
+              <input type="checkbox" id="planRoundTrip" checked class="w-4 h-4 rounded text-indigo-600 accent-indigo-600">
+              Round Trip (Daily Return Trips / 2 Rides)
+            </label>
+            <button id="addLegBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition flex items-center gap-1.5 shadow-sm active:scale-95">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              Add Trip Leg
+            </button>
+          </div>
+        </div>
+
+        <!-- Scheduled Legs Queue -->
+        <div class="mt-4">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-slate-700">Active Scheduled Journeys</span>
+            <button id="clearAllLegsBtn" class="text-[11px] text-rose-500 hover:underline">Clear All</button>
+          </div>
+          <div id="itineraryContainer" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
+        </div>
+
+        <!-- Audit Dashboard -->
+        <div class="mt-5 pt-4 border-t border-slate-200">
+          <div class="grid grid-cols-3 gap-2 text-center mb-3">
+            <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+              <span class="text-[10px] text-slate-400 block font-semibold">Total Days</span>
+              <span id="statDays" class="text-base font-extrabold text-slate-800">0</span>
+            </div>
+            <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+              <span class="text-[10px] text-slate-400 block font-semibold">Total Rides</span>
+              <span id="statRides" class="text-base font-extrabold text-slate-800">0</span>
+            </div>
+            <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+              <span class="text-[10px] text-slate-400 block font-semibold">Total Regular Spend</span>
+              <span id="statFare" class="text-base font-extrabold text-slate-800">RM 0.00</span>
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="space-y-1 mb-3">
+            <div class="flex justify-between text-[11px] font-semibold">
+              <span class="text-slate-500">Regular Cost vs My50 Limit</span>
+              <span id="progressBarRatio" class="text-slate-700 font-bold">RM 0.00 / RM 50.00</span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+              <div id="progressBar" class="bg-indigo-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <div id="decisionCard" class="p-3.5 rounded-xl border text-xs font-medium transition">
+            Add at least one commute leg above to calculate My50 savings.
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // --- 1. FULL INTEGRATED TRANSIT DATABASE ---
+    const lineData = {
+      "MRT_Kajang": {
+        name: "MRT Kajang Line", code: "KG",
+        stations: [
+          { id: "KG04", name: "Kwasa Damansara" }, { id: "KG05", name: "Kwasa Sentral" }, { id: "KG06", name: "Kota Damansara" }, { id: "KG08", name: "Surian" }, { id: "KG09", name: "Mutiara Damansara" }, { id: "KG10", name: "Bandar Utama" }, { id: "KG12", name: "TTDI" }, { id: "KG13", name: "Phileo Damansara" }, { id: "KG14", name: "Pavilion Damansara Heights" }, { id: "KG15", name: "Semantan" }, { id: "KG16", name: "Muzium Negara (KL Sentral)" }, { id: "KG17", name: "Pasar Seni" }, { id: "KG18", name: "Merdeka" }, { id: "KG19", name: "Pavilion Bukit Bintang" }, { id: "KG20", name: "Tun Razak Exchange (TRX)" }, { id: "KG21", name: "Cochrane" }, { id: "KG22", name: "AEON Maluri" }, { id: "KG23", name: "Taman Pertama" }, { id: "KG24", name: "Taman Midah" }, { id: "KG25", name: "Taman Mutiara" }, { id: "KG26", name: "Taman Connaught" }, { id: "KG27", name: "Taman Suntex" }, { id: "KG28", name: "Sri Raya" }, { id: "KG29", name: "Bandar Tun Hussein Onn" }, { id: "KG30", name: "Batu Sebelas Cheras" }, { id: "KG31", name: "Bukit Dukung" }, { id: "KG33", name: "Sungai Jernih" }, { id: "KG34", name: "Stadium Kajang" }, { id: "KG35", name: "Kajang" }
+        ]
+      },
+      "MRT_Putrajaya": {
+        name: "MRT Putrajaya Line", code: "PY",
+        stations: [
+          { id: "PY01", name: "Kwasa Damansara" }, { id: "PY03", name: "Kampung Selamat" }, { id: "PY04", name: "Sungai Buloh" }, { id: "PY05", name: "Damansara Damai" }, { id: "PY06", name: "Sri Damansara Barat" }, { id: "PY07", name: "Sri Damansara Sentral" }, { id: "PY08", name: "Sri Damansara Timur" }, { id: "PY09", name: "Metro Prima" }, { id: "PY10", name: "Kepong Baru" }, { id: "PY11", name: "Jinjang" }, { id: "PY12", name: "Sri Delima" }, { id: "PY13", name: "Kampung Batu" }, { id: "PY14", name: "Kentonmen" }, { id: "PY15", name: "Jalan Ipoh" }, { id: "PY16", name: "Sentul Barat" }, { id: "PY17", name: "Titiwangsa" }, { id: "PY18", name: "Hospital Kuala Lumpur" }, { id: "PY19", name: "Raja Uda" }, { id: "PY20", name: "Ampang Park" }, { id: "PY21", name: "Persiaran KLCC" }, { id: "PY22", name: "Conlay" }, { id: "PY23", name: "Tun Razak Exchange (TRX)" }, { id: "PY24", name: "Chan Sow Lin" }, { id: "PY27", name: "Kuchai" }, { id: "PY28", name: "Taman Naga Emas" }, { id: "PY29", name: "Sungai Besi" }, { id: "PY31", name: "Serdang Raya Utara" }, { id: "PY32", name: "Serdang Raya Selatan" }, { id: "PY33", name: "Serdang Jaya" }, { id: "PY34", name: "UPM" }, { id: "PY36", name: "Taman Equine" }, { id: "PY37", name: "Putra Permai" }, { id: "PY38", name: "16 Sierra" }, { id: "PY39", name: "Cyberjaya Utara" }, { id: "PY40", name: "Cyberjaya City Centre" }, { id: "PY41", name: "Putrajaya Sentral" }
+        ]
+      },
+      "LRT_KelanaJaya": {
+        name: "LRT Kelana Jaya Line", code: "KJ",
+        stations: [
+          { id: "KJ01", name: "Gombak" }, { id: "KJ02", name: "Taman Melati" }, { id: "KJ03", name: "Wangsa Maju" }, { id: "KJ04", name: "Sri Rampai" }, { id: "KJ05", name: "Setiawangsa" }, { id: "KJ06", name: "Jelatek" }, { id: "KJ07", name: "Dato' Keramat" }, { id: "KJ08", name: "Damai" }, { id: "KJ09", name: "Ampang Park" }, { id: "KJ10", name: "KLCC" }, { id: "KJ11", name: "Kampung Baru" }, { id: "KJ12", name: "Dang Wangi" }, { id: "KJ13", name: "Masjid Jamek" }, { id: "KJ14", name: "Pasar Seni" }, { id: "KJ15", name: "KL Sentral" }, { id: "KJ16", name: "Bangsar" }, { id: "KJ17", name: "Abdullah Hukum" }, { id: "KJ19", name: "Universiti" }, { id: "KJ20", name: "Taman Jaya" }, { id: "KJ21", name: "Asia Jaya" }, { id: "KJ22", name: "Taman Paramount" }, { id: "KJ23", name: "Taman Bahagia" }, { id: "KJ24", name: "Kelana Jaya" }, { id: "KJ25", name: "Lembah Subang" }, { id: "KJ26", name: "Ara Damansara" }, { id: "KJ27", name: "Glenmarie" }, { id: "KJ28", name: "Subang Jaya" }, { id: "KJ31", name: "USJ 7" }, { id: "KJ35", name: "Alam Megah" }, { id: "KJ37", name: "Putra Heights" }
+        ]
+      },
+      "LRT_Ampang": {
+        name: "LRT Ampang Line", code: "AG",
+        stations: [
+          { id: "AG01", name: "Sentul Timur" }, { id: "AG02", name: "Sentul" }, { id: "AG03", name: "Titiwangsa" }, { id: "AG04", name: "PWTC" }, { id: "AG05", name: "Sultan Ismail" }, { id: "AG06", name: "Bandaraya" }, { id: "AG07", name: "Masjid Jamek" }, { id: "AG08", name: "Plaza Rakyat" }, { id: "AG09", name: "Pudu" }, { id: "AG10", name: "Hang Tuah" }, { id: "AG11", name: "Chan Sow Lin" }, { id: "AG12", name: "Miharja" }, { id: "AG13", name: "AEON Maluri" }, { id: "AG14", name: "Pandan Jaya" }, { id: "AG15", name: "Pandan Indah" }, { id: "AG16", name: "Cempaka" }, { id: "AG17", name: "Cahaya" }, { id: "AG18", name: "Ampang" }
+        ]
+      },
+      "LRT_SriPetaling": {
+        name: "LRT Sri Petaling Line", code: "SP",
+        stations: [
+          { id: "SP01", name: "Sentul Timur" }, { id: "SP02", name: "Sentul" }, { id: "SP03", name: "Titiwangsa" }, { id: "SP04", name: "PWTC" }, { id: "SP05", name: "Sultan Ismail" }, { id: "SP06", name: "Bandaraya" }, { id: "SP07", name: "Masjid Jamek" }, { id: "SP08", name: "Plaza Rakyat" }, { id: "SP09", name: "Pudu" }, { id: "SP10", name: "Hang Tuah" }, { id: "SP11", name: "Chan Sow Lin" }, { id: "SP12", name: "Cheras" }, { id: "SP13", name: "Salak Selatan" }, { id: "SP14", name: "Bandar Tun Razak" }, { id: "SP15", name: "Bandar Tasik Selatan" }, { id: "SP16", name: "Sungai Besi" }, { id: "SP17", name: "Bukit Jalil" }, { id: "SP18", name: "Sri Petaling" }, { id: "SP31", name: "Putra Heights" }
+        ]
+      }
+    };
+
+    const interchanges = [
+      { name: "Kwasa Damansara", lines: ["MRT_Kajang", "MRT_Putrajaya"] }, { name: "Tun Razak Exchange (TRX)", lines: ["MRT_Kajang", "MRT_Putrajaya"] }, { name: "Pasar Seni", lines: ["MRT_Kajang", "LRT_KelanaJaya"] }, { name: "Masjid Jamek", lines: ["LRT_KelanaJaya", "LRT_Ampang", "LRT_SriPetaling"] }, { name: "Titiwangsa", lines: ["MRT_Putrajaya", "LRT_Ampang", "LRT_SriPetaling"] }, { name: "Ampang Park", lines: ["MRT_Putrajaya", "LRT_KelanaJaya"] }, { name: "Chan Sow Lin", lines: ["MRT_Putrajaya", "LRT_Ampang", "LRT_SriPetaling"] }, { name: "Sungai Besi", lines: ["MRT_Putrajaya", "LRT_SriPetaling"] }, { name: "Putra Heights", lines: ["LRT_KelanaJaya", "LRT_SriPetaling"] }
+    ];
+
+    const AVG_TRAVEL_MIN_PER_STOP = 2.4;
+    let itineraries = [];
+
+    // --- 2. DOM REFS ---
+    const originLineSelect = document.getElementById('originLineSelect');
+    const originStationSelect = document.getElementById('originStationSelect');
+    const destLineSelect = document.getElementById('destLineSelect');
+    const destStationSelect = document.getElementById('destStationSelect');
+    const swapBtn = document.getElementById('swapBtn');
+    
+    const countdownTimer = document.getElementById('countdownTimer');
+    const serviceBadge = document.getElementById('serviceBadge');
+    const arrivalTimeDisplay = document.getElementById('arrivalTimeDisplay');
+    const durationDisplay = document.getElementById('durationDisplay');
+    const routePathDetails = document.getElementById('routePathDetails');
+    const tngFareDisplay = document.getElementById('tngFareDisplay');
+    const cashFareDisplay = document.getElementById('cashFareDisplay');
+
+    // Right Planner Elements
+    const planOrigStationSelect = document.getElementById('planOrigStationSelect');
+    const planDestStationSelect = document.getElementById('planDestStationSelect');
+    const fareTypeSelector = document.getElementById('fareTypeSelector');
+    const planSingleFareLabel = document.getElementById('planSingleFareLabel');
+    const planSingleFarePreview = document.getElementById('planSingleFarePreview');
+    const planStopsPreview = document.getElementById('planStopsPreview');
+    const copyFromLeftBtn = document.getElementById('copyFromLeftBtn');
+
+    const dayFilter = document.getElementById('dayFilter');
+    const startDateInput = document.getElementById('startDateInput');
+    const endDateInput = document.getElementById('endDateInput');
+    const planRoundTrip = document.getElementById('planRoundTrip');
+    const addLegBtn = document.getElementById('addLegBtn');
+    const itineraryContainer = document.getElementById('itineraryContainer');
+    const clearAllLegsBtn = document.getElementById('clearAllLegsBtn');
+
+    const statDays = document.getElementById('statDays');
+    const statRides = document.getElementById('statRides');
+    const statFare = document.getElementById('statFare');
+    const progressBar = document.getElementById('progressBar');
+    const progressBarRatio = document.getElementById('progressBarRatio');
+    const decisionCard = document.getElementById('decisionCard');
+
+    // --- 3. METRO ROUTING LOGIC ---
+    function findBestRoute(origLine, origStIdx, destLine, destStIdx) {
+      if (origLine === destLine) {
+        const stops = Math.abs(destStIdx - origStIdx);
+        return { stops, interchange: null, totalDuration: stops * AVG_TRAVEL_MIN_PER_STOP };
+      }
+
+      let bestHub = null;
+      let minStops = Infinity;
+      let leg1Stops = 0;
+      let leg2Stops = 0;
+
+      interchanges.forEach(hub => {
+        if (hub.lines.includes(origLine) && hub.lines.includes(destLine)) {
+          const hubIdxOnOrig = lineData[origLine].stations.findIndex(s => s.name.startsWith(hub.name));
+          const hubIdxOnDest = lineData[destLine].stations.findIndex(s => s.name.startsWith(hub.name));
+
+          if (hubIdxOnOrig !== -1 && hubIdxOnDest !== -1) {
+            const stopsLine1 = Math.abs(hubIdxOnOrig - origStIdx);
+            const stopsLine2 = Math.abs(destStIdx - hubIdxOnDest);
+            const total = stopsLine1 + stopsLine2;
+            if (total < minStops) {
+              minStops = total;
+              bestHub = hub;
+              leg1Stops = stopsLine1;
+              leg2Stops = stopsLine2;
+            }
+          }
+        }
+      });
+
+      if (bestHub) {
+        return {
+          stops: minStops,
+          interchange: bestHub.name,
+          leg1Stops, leg2Stops,
+          totalDuration: minStops * AVG_TRAVEL_MIN_PER_STOP + 5
+        };
+      }
+      
+      const directStops = Math.abs(destStIdx - origStIdx) + 8;
+      return { stops: directStops, interchange: "Masjid Jamek", totalDuration: directStops * AVG_TRAVEL_MIN_PER_STOP + 10 };
+    }
+
+    function calculateFare(stops) {
+      if (stops === 0) return { tng: 0.00, cash: 0.00 };
+      const tng = 1.20 + (stops * 0.32);
+      const cash = tng + 0.40;
+      return {
+        tng: Math.round(tng * 10) / 10,
+        cash: Math.round(cash * 10) / 10
+      };
+    }
+
+    // --- 4. POPULATE SELECTORS WITH ALL MRT/LRT STATIONS ---
+    function buildSelectors() {
+      // Left Panel lines
+      Object.keys(lineData).forEach(key => {
+        originLineSelect.add(new Option(lineData[key].name, key));
+        destLineSelect.add(new Option(lineData[key].name, key));
+      });
+
+      // Right Panel Planner Dropdowns (Using OptGroups for All Lines & Stations)
+      const lineKeys = Object.keys(lineData);
+      lineKeys.forEach(lKey => {
+        const grp1 = document.createElement('optgroup');
+        grp1.label = lineData[lKey].name;
+        const grp2 = document.createElement('optgroup');
+        grp2.label = lineData[lKey].name;
+
+        lineData[lKey].stations.forEach((st, sIdx) => {
+          const val = `${lKey}|${sIdx}`;
+          grp1.appendChild(new Option(`${st.id} - ${st.name}`, val));
+          grp2.appendChild(new Option(`${st.id} - ${st.name}`, val));
+        });
+
+        planOrigStationSelect.appendChild(grp1);
+        planDestStationSelect.appendChild(grp2);
+      });
+
+      originLineSelect.addEventListener('change', () => populateStations('origin'));
+      destLineSelect.addEventListener('change', () => populateStations('dest'));
+    }
+
+    function populateStations(type) {
+      const lineSelect = type === 'origin' ? originLineSelect : destLineSelect;
+      const stationSelect = type === 'origin' ? originStationSelect : destStationSelect;
+      const selectedLine = lineSelect.value;
+
+      stationSelect.innerHTML = "";
+      lineData[selectedLine].stations.forEach((st, idx) => {
+        stationSelect.add(new Option(`${st.id} - ${st.name}`, idx));
+      });
+
+      updateForecastEngine();
+    }
+
+    // Updates preview under the planner dropdowns
+    function updatePlannerPreview() {
+      const [origLine, origIdx] = planOrigStationSelect.value.split('|');
+      const [destLine, destIdx] = planDestStationSelect.value.split('|');
+      const routing = findBestRoute(origLine, parseInt(origIdx), destLine, parseInt(destIdx));
+      const { tng, cash } = calculateFare(routing.stops);
+      const selectedFareType = fareTypeSelector.querySelector('.active').dataset.value;
+
+      if(selectedFareType === 'cash') {
+        planSingleFareLabel.innerHTML = `Leg Single Fare (Cash): <b id="planSingleFarePreview" class="text-indigo-600 font-bold">RM ${cash.toFixed(2)}</b>`;
+      } else {
+        planSingleFareLabel.innerHTML = `Leg Single Fare (TNG): <b id="planSingleFarePreview" class="text-indigo-600 font-bold">RM ${tng.toFixed(2)}</b>`;
+      }
+
+      planStopsPreview.textContent = `${routing.stops} stops ${routing.interchange ? `(via ${routing.interchange})` : '(Direct)'}`;
+    }
+
+    // --- 5. TIMETABLE TICKER ---
+    function updateForecastEngine() {
+      const now = new Date();
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+      const seconds = now.getSeconds();
+      const totalMinutes = hours * 60 + minutes;
+
+      let intervalMin = 6;
+      let serviceLabel = "Normal Schedule: 6m";
+      if ((totalMinutes >= 420 && totalMinutes <= 570) || (totalMinutes >= 1020 && totalMinutes <= 1170)) {
+        intervalMin = 4;
+        serviceLabel = "Peak Hours: 4m";
+      } else if (hours >= 22 || hours < 6) {
+        intervalMin = 10;
+        serviceLabel = "Late Night: 10m";
+      }
+
+      serviceBadge.textContent = serviceLabel;
+
+      const headwaySec = intervalMin * 60;
+      const elapsedSec = (minutes * 60 + seconds) % headwaySec;
+      const remainingSec = headwaySec - elapsedSec;
+
+      const m = Math.floor(remainingSec / 60);
+      const s = remainingSec % 60;
+      countdownTimer.textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
+
+      const origLine = originLineSelect.value;
+      const origStIdx = parseInt(originStationSelect.value);
+      const destLine = destLineSelect.value;
+      const destStIdx = parseInt(destStationSelect.value);
+
+      if (isNaN(origStIdx) || isNaN(destStIdx)) return;
+
+      const routing = findBestRoute(origLine, origStIdx, destLine, destStIdx);
+      const { tng, cash } = calculateFare(routing.stops);
+
+      tngFareDisplay.textContent = `RM ${tng.toFixed(2)}`;
+      cashFareDisplay.textContent = `RM ${cash.toFixed(2)}`;
+      durationDisplay.textContent = `~${Math.round(routing.totalDuration)} min (${routing.stops} stops)`;
+
+      if (routing.interchange) {
+        routePathDetails.classList.remove('hidden');
+        routePathDetails.innerHTML = `
+          <div class="flex items-center gap-1.5 font-semibold text-emerald-800 mb-1">
+            <i data-lucide="shuffle" class="w-3.5 h-3.5"></i>
+            Transfer Required
+          </div>
+          Take <b>${lineData[origLine].name}</b> for ${routing.leg1Stops} stops, transfer at <b>${routing.interchange}</b>, then catch <b>${lineData[destLine].name}</b> for ${routing.leg2Stops} stops.
+        `;
+      } else {
+        routePathDetails.classList.add('hidden');
+      }
+
+      const arrival = new Date(now.getTime() + (remainingSec * 1000) + (routing.totalDuration * 60 * 1000));
+      const arrH = arrival.getHours().toString().padStart(2, '0');
+      const arrM = arrival.getMinutes().toString().padStart(2, '0');
+      arrivalTimeDisplay.textContent = `${arrH}:${arrM}`;
+
+      lucide.createIcons();
+    }
+
+    // --- 6. MULTI-PERIOD CALENDAR AUDITOR ---
+    function calculateLegRides(startDateStr, endDateStr, filter, isRoundTrip) {
+      if (!startDateStr || !endDateStr) return { days: 0, rides: 0 };
+      const start = new Date(startDateStr);
+      const end = new Date(endDateStr);
+      if (start > end) return { days: 0, rides: 0 };
+
+      let matchingDays = 0;
+      let cur = new Date(start);
+
+      while (cur <= end) {
+        const dayOfWeek = cur.getDay(); // 0: Sun, 6: Sat
+        const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+        if (filter === 'all') matchingDays++;
+        else if (filter === 'weekdays' && isWeekday) matchingDays++;
+        else if (filter === 'weekends' && isWeekend) matchingDays++;
+
+        cur.setDate(cur.getDate() + 1);
+      }
+
+      return {
+        days: matchingDays,
+        rides: matchingDays * (isRoundTrip ? 2 : 1)
+      };
+    }
+
+    function refreshAuditDashboard() {
+      let totalDays = 0;
+      let totalRides = 0;
+      let totalCost = 0;
+
+      itineraries.forEach(item => {
+        const { days, rides } = calculateLegRides(item.startDate, item.endDate, item.filter, item.isRoundTrip);
+        totalDays += days;
+        totalRides += rides;
+        totalCost += (rides * item.singleFare);
+      });
+
+      statDays.textContent = totalDays;
+      statRides.textContent = totalRides;
+      statFare.textContent = `RM ${totalCost.toFixed(2)}`;
+      progressBarRatio.textContent = `RM ${totalCost.toFixed(2)} / RM 50.00`;
+
+      const percent = Math.min((totalCost / 65) * 100, 100);
+      progressBar.style.width = `${percent}%`;
+
+      if (itineraries.length === 0) {
+        decisionCard.className = "p-3.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-xs";
+        decisionCard.innerHTML = `<i data-lucide="info" class="w-4 h-4 inline mr-1 text-slate-400"></i> Configure your commute schedule above and click "Add Trip Leg".`;
+      } else if (totalCost >= 50.00) {
+        const savings = totalCost - 50.00;
+        progressBar.className = "bg-emerald-600 h-full rounded-full transition-all";
+        decisionCard.className = "p-3.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-900 text-xs";
+        decisionCard.innerHTML = `
+          <div class="font-bold text-sm text-emerald-800 flex items-center gap-1.5 mb-1">
+            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i>
+            Buy My50 Pass! You save RM ${savings.toFixed(2)}
+          </div>
+          Your scheduled commutes cost <b>RM ${totalCost.toFixed(2)}</b>. The RM 50 pass cuts your travel expenses by <b>${Math.round((savings/totalCost)*100)}%</b>!
+        `;
+      } else {
+        const deficit = 50.00 - totalCost;
+        progressBar.className = "bg-amber-500 h-full rounded-full transition-all";
+        decisionCard.className = "p-3.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-900 text-xs";
+        decisionCard.innerHTML = `
+          <div class="font-bold text-sm text-amber-800 flex items-center gap-1.5 mb-1">
+            <i data-lucide="alert-circle" class="w-4 h-4 text-amber-600"></i>
+            Pay-Per-Ride Option (No Pass)
+          </div>
+          Your scheduled rides total <b>RM ${totalCost.toFixed(2)}</b>, which is <b>RM ${deficit.toFixed(2)} short</b> of the pass limit. Simply use your regular fare method.
+        `;
+      }
+      lucide.createIcons();
+    }
+
+    function renderItineraryQueue() {
+      if (itineraries.length === 0) {
+        itineraryContainer.innerHTML = `<p class="text-xs text-slate-400 italic py-2">No active commutes added yet.</p>`;
+        refreshAuditDashboard();
+        return;
+      }
+
+      itineraryContainer.innerHTML = itineraries.map((item, index) => {
+        const { days, rides } = calculateLegRides(item.startDate, item.endDate, item.filter, item.isRoundTrip);
+        const cost = (rides * item.singleFare).toFixed(2);
+        const fBadge = item.filter === 'weekdays' ? 'Weekdays' : (item.filter === 'weekends' ? 'Weekends' : 'Everyday');
+        const fareTypeBadge = item.fareType === 'cash' ? 'Cash' : 'TNG';
+        const fareTypeColor = item.fareType === 'cash' ? 'bg-sky-100 text-sky-700' : 'bg-emerald-100 text-emerald-700';
+
+        return `
+          <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs transition hover:bg-slate-100/60">
+            <div>
+              <div class="font-bold text-slate-800">${item.fromName} (${item.origLineCode}) ➔ ${item.toName} (${item.destLineCode})</div>
+              <div class="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
+                <span class="font-medium">${item.startDate} to ${item.endDate}</span>
+                <span class="bg-indigo-100 text-indigo-700 px-1.5 py-0.2 rounded font-semibold text-[9px]">${fBadge}</span>
+                <span class="${fareTypeColor} px-1.5 py-0.2 rounded font-semibold text-[9px]">${fareTypeBadge}</span>
+                <span>${days} days (${rides} rides)</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="font-bold text-slate-700">RM ${cost}</span>
+              <button onclick="removeLeg(${index})" class="text-slate-400 hover:text-rose-500 transition">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+      refreshAuditDashboard();
+    }
+
+    window.removeLeg = function(index) {
+      itineraries.splice(index, 1);
+      renderItineraryQueue();
+    };
+
+    function initialize() {
+      buildSelectors();
+
+      // Default line options
+      originLineSelect.value = "MRT_Kajang";
+      destLineSelect.value = "MRT_Kajang";
+
+      populateStations('origin');
+      populateStations('dest');
+
+      originStationSelect.value = 13; // Bukit Bintang
+      destStationSelect.value = 14;   // TRX
+
+      // Planner defaults
+      planOrigStationSelect.value = "MRT_Kajang|13";
+      planDestStationSelect.value = "MRT_Kajang|17";
+
+      const today = new Date();
+      const yr = today.getFullYear();
+      const mt = String(today.getMonth() + 1).padStart(2, '0');
+      startDateInput.value = `${yr}-${mt}-01`;
+      endDateInput.value = `${yr}-${mt}-28`;
+
+      renderItineraryQueue();
+      updateForecastEngine();
+      updatePlannerPreview();
+
+      setInterval(updateForecastEngine, 1000);
+    }
+
+    // --- EVENT LISTENERS ---
+    originStationSelect.addEventListener('change', updateForecastEngine);
+    destStationSelect.addEventListener('change', updateForecastEngine);
+    planOrigStationSelect.addEventListener('change', updatePlannerPreview);
+    planDestStationSelect.addEventListener('change', updatePlannerPreview);
+
+    fareTypeSelector.addEventListener('click', (e) => {
+        if (e.target.tagName === 'BUTTON') {
+            fareTypeSelector.querySelector('.active').classList.remove('active');
+            e.target.classList.add('active');
+            updatePlannerPreview();
+        }
+    });
+
+    copyFromLeftBtn.addEventListener('click', () => {
+      const origLine = originLineSelect.value;
+      const origIdx = originStationSelect.value;
+      const destLine = destLineSelect.value;
+      const destIdx = destStationSelect.value;
+
+      planOrigStationSelect.value = `${origLine}|${origIdx}`;
+      planDestStationSelect.value = `${destLine}|${destIdx}`;
+      updatePlannerPreview();
+    });
+
+    swapBtn.addEventListener('click', () => {
+      const tempLine = originLineSelect.value;
+      const tempSt = originStationSelect.value;
+      originLineSelect.value = destLineSelect.value;
+      populateStations('origin');
+      originStationSelect.value = destStationSelect.value;
+      destLineSelect.value = tempLine;
+      populateStations('dest');
+      destStationSelect.value = tempSt;
+      updateForecastEngine();
+    });
+
+    addLegBtn.addEventListener('click', () => {
+      const [origLine, origIdx] = planOrigStationSelect.value.split('|');
+      const [destLine, destIdx] = planDestStationSelect.value.split('|');
+      const start = startDateInput.value;
+      const end = endDateInput.value;
+
+      if (!start || !end) {
+        alert("Please select both a valid Start Date and an End Date.");
+        return;
+      }
+
+      const origStation = lineData[origLine].stations[parseInt(origIdx)];
+      const destStation = lineData[destLine].stations[parseInt(destIdx)];
+      const routing = findBestRoute(origLine, parseInt(origIdx), destLine, parseInt(destIdx));
+      const fares = calculateFare(routing.stops);
+      const selectedFareType = fareTypeSelector.querySelector('.active').dataset.value;
+      const singleFare = selectedFareType === 'cash' ? fares.cash : fares.tng;
+
+      itineraries.push({
+        fromName: origStation.name,
+        origLineCode: origStation.id.slice(0, 2),
+        toName: destStation.name,
+        destLineCode: destStation.id.slice(0, 2),
+        singleFare,
+        fareType: selectedFareType,
+        startDate: start,
+        endDate: end,
+        filter: dayFilter.value,
+        isRoundTrip: planRoundTrip.checked
+      });
+
+      renderItineraryQueue();
+    });
+
+    clearAllLegsBtn.addEventListener('click', () => {
+      itineraries = [];
+      renderItineraryQueue();
+    });
+
+    window.onload = initialize;
+  </script>
+</body>
+</html>
